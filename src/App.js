@@ -31,23 +31,29 @@ export const useIntersect = (ref, rootMargin = '0px') => {
 function App() {
   const rootRect = useRef();
   const thingToWatch = useRef();
+  const [isVisible, setIsVisible] = useState(false);
+  console.log('isVisible', isVisible);
   // This reusable hook is not firing correctly when state
   // updating quickly
   // const entry = useIntersect(thingToWatch, '-50%');
-  //console.log(entry);
+  // console.log(entry);
 
   // This observer fires correctly when scrolling quickly
   const observer = new IntersectionObserver(
     ([entry]) => {
       // Update our state when observer callback fires
       console.log(entry);
+      setIsVisible(entry.isIntersecting);
     },
     {
-      rootMargin: '0px',
+      rootMargin: '-25%',
     },
   );
   useEffect(() => {
-    observer.observe(thingToWatch.current);
+    const currRef = thingToWatch.current;
+    observer.observe(currRef);
+
+    return () => observer.unobserve(currRef);
   });
   return (
     <div ref={rootRect} className="App">
@@ -65,10 +71,19 @@ function App() {
           Learn React
         </a>
         <div style={{ height: '100vh' }} />
+        <div style={{ height: '100vh' }} />
         <div
           ref={thingToWatch}
           style={{ height: '10px', width: '10px', background: 'red' }}
         />
+        <span
+          style={{
+            opacity: isVisible ? 1 : 0,
+            transition: 'ease-in opacity 1s',
+          }}
+        >
+          Im visible!!!!!
+        </span>
         <div style={{ height: '100vh' }} />
       </header>
     </div>
