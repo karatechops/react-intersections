@@ -2,18 +2,29 @@ import React, { useState, useEffect, useRef } from 'react';
 import logo from './logo.svg';
 import './App.css';
 
-export const useIntersectRef = ({
-  root = null,
-  rootMargin,
-  threshold = 0,
+export const useIntersect = ({
+  root = null, // defaults to viewport when null.
+  rootMargin, // expands or contracts the intersection root hit area
+  threshold = 0, // intersection ratio value, also accepts arrays
+  repeats = true,
+  debug = false,
 } = {}) => {
-  const [entry, updateEntry] = useState({});
+  const [observerEntry, updateEntry] = useState({});
   const [node, setNode] = useState(null);
 
   const observer = useRef(
     new window.IntersectionObserver(
       ([currEntry]) => {
-        updateEntry(currEntry.isIntersecting);
+        if (debug) console.log(currEntry); // eslint-disable-line no-console
+        // Only trigger once if repeat option is false
+        if (!repeats && currEntry.isIntersecting) {
+          // Pull the observer after the event fires
+          observer.current.disconnect();
+          updateEntry(currEntry);
+        }
+        if (repeats) {
+          updateEntry(currEntry);
+        }
       },
       {
         root,
@@ -32,76 +43,21 @@ export const useIntersectRef = ({
     return () => currentObserver.disconnect();
   }, [node]);
 
-  return [setNode, entry];
-};
-
-// Attempting to create a reusable intersection observer...
-export const useIntersect = (
-  ref, // Node to watch
-  {
-    threshold = 0,
-    rootMargin = '0px',
-    root = null, // Intersection API params
-  } = {},
-  { repeats = true, debug = false } = {}, // Options
-) => {
-  // State and setter for storing whether element is visible
-  const [isIntersecting, setIntersecting] = useState(false);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        // Update our state when observer callback fires
-        if (debug) console.log(entry); // eslint-disable-line no-console
-        if (!repeats && entry.isIntersecting) {
-          setIntersecting(entry.isIntersecting);
-          observer.unobserve(ref.current);
-        } else {
-          setIntersecting(entry.isIntersecting);
-        }
-      },
-      {
-        root, // defaults to viewport when null.
-        threshold, // intersection ratio value, also accepts arrays
-        rootMargin, // expands or contracts the intersection root hit area
-      },
-    );
-    if (ref.current) {
-      observer.observe(ref.current);
-    }
-    return () => {
-      // react-hooks linter complains here but copying the ref.current
-      // to a variable breaks the hooks.
-      observer.unobserve(ref.current); // eslint-disable-line react-hooks/exhaustive-deps
-    };
-  });
-
-  return isIntersecting;
+  // Pass back method to set dom node and observer output
+  return [setNode, observerEntry];
 };
 
 function App() {
-  const rootRect = useRef();
-  // const thingToWatch = useRef();
-  // const thingToWatchNext = useRef();
+  // Test if state changes overwrite observer state
   const [isBtnPressed, setBtnPressed] = useState(false);
 
-  /* const isVisible = useIntersect(thingToWatch);
-  const isNextVisible = useIntersect(thingToWatchNext); */
-  /* const isVisible = useIntersect(thingToWatch, undefined, {
-    debug: true,
-    repeats: false,
-  });
-  const isNextVisible = useIntersect(thingToWatchNext, undefined, {
-    debug: true,
-    repeats: false,
-  });
+  const [thingToWatch, entry] = useIntersect({ repeats: false });
+  const [thingToWatchNext, entryNext] = useIntersect();
+  const isVisible = entry.isIntersecting;
+  const isNextVisible = entryNext.isIntersecting;
   console.log(isVisible, isNextVisible);
-  */
-  const [thingToWatch, isVisible] = useIntersectRef();
-  const [thingToWatchNext, isNextVisible] = useIntersectRef();
-
   return (
-    <div ref={rootRect} className="App">
+    <div className="App">
       <header className="App-header">
         <img src={logo} className="App-logo" alt="logo" />
         <p>
@@ -135,7 +91,10 @@ function App() {
             transition: 'ease-in opacity 1s',
           }}
         >
-          Im visible!!!!!
+          Im visible and only trigger once{' '}
+          <span role="img" aria-label="hand waving">
+            👋
+          </span>
         </span>
         <div style={{ height: '50vh' }} />
         <div
@@ -149,7 +108,10 @@ function App() {
             transition: 'ease-in opacity 1s',
           }}
         >
-          Im visible also!!!!!
+          Im visible and repeatedly trigger{' '}
+          <span role="img" aria-label="hand waving">
+            🔁
+          </span>
         </span>
         <div style={{ height: '100vh' }} />
       </header>
