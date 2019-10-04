@@ -10,7 +10,7 @@ export const useIntersect = (
     rootMargin = '0px',
     root = null, // Intersection API params
   } = {},
-  { repeats = true } = {}, // Options
+  { repeats = true, debug = false } = {}, // Options
 ) => {
   // State and setter for storing whether element is visible
   const [isIntersecting, setIntersecting] = useState(false);
@@ -19,7 +19,7 @@ export const useIntersect = (
     const observer = new IntersectionObserver(
       ([entry]) => {
         // Update our state when observer callback fires
-        console.log(entry);
+        if (debug) console.log(entry); // eslint-disable-line no-console
         if (!repeats && entry.isIntersecting) {
           setIntersecting(entry.isIntersecting);
           observer.unobserve(ref.current);
@@ -37,7 +37,9 @@ export const useIntersect = (
       observer.observe(ref.current);
     }
     return () => {
-      observer.unobserve(ref.current);
+      // react-hooks linter complains here but copying the ref.current
+      // to a variable breaks the hooks.
+      observer.unobserve(ref.current); // eslint-disable-line react-hooks/exhaustive-deps
     };
   });
 
@@ -49,34 +51,19 @@ function App() {
   const thingToWatch = useRef();
   const thingToWatchNext = useRef();
   const [isBtnPressed, setBtnPressed] = useState(false);
-  // This reusable hook is not firing correctly when state
-  // updating quickly
-  const isVisible = useIntersect(thingToWatch);
-  const isNextVisible = useIntersect(thingToWatchNext);
+
+  /* const isVisible = useIntersect(thingToWatch);
+  const isNextVisible = useIntersect(thingToWatchNext); */
+  const isVisible = useIntersect(thingToWatch, undefined, {
+    debug: true,
+    repeats: false,
+  });
+  const isNextVisible = useIntersect(thingToWatchNext, undefined, {
+    debug: true,
+    repeats: false,
+  });
   console.log(isVisible, isNextVisible);
 
-  // This observer fires correctly when scrolling quickly
-  /* 
-  const [isVisible, setIsVisible] = useState(false);
-  console.log('isVisible', isVisible);
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      // Update our state when observer callback fires
-      console.log(entry);
-      setIsVisible(entry.isIntersecting);
-    },
-    {
-      rootMargin: '0px',
-      threshold: [1],
-    },
-  );
-  useEffect(() => {
-    const currRef = thingToWatch.current;
-    observer.observe(currRef);
-
-    return () => observer.unobserve(currRef);
-  });
-  */
   return (
     <div ref={rootRect} className="App">
       <header className="App-header">
