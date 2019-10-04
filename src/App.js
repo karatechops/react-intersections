@@ -2,6 +2,39 @@ import React, { useState, useEffect, useRef } from 'react';
 import logo from './logo.svg';
 import './App.css';
 
+export const useIntersectRef = ({
+  root = null,
+  rootMargin,
+  threshold = 0,
+} = {}) => {
+  const [entry, updateEntry] = useState({});
+  const [node, setNode] = useState(null);
+
+  const observer = useRef(
+    new window.IntersectionObserver(
+      ([currEntry]) => {
+        updateEntry(currEntry.isIntersecting);
+      },
+      {
+        root,
+        rootMargin,
+        threshold,
+      },
+    ),
+  );
+
+  useEffect(() => {
+    const { current: currentObserver } = observer;
+    currentObserver.disconnect();
+
+    if (node) currentObserver.observe(node);
+
+    return () => currentObserver.disconnect();
+  }, [node]);
+
+  return [setNode, entry];
+};
+
 // Attempting to create a reusable intersection observer...
 export const useIntersect = (
   ref, // Node to watch
@@ -48,13 +81,13 @@ export const useIntersect = (
 
 function App() {
   const rootRect = useRef();
-  const thingToWatch = useRef();
-  const thingToWatchNext = useRef();
+  // const thingToWatch = useRef();
+  // const thingToWatchNext = useRef();
   const [isBtnPressed, setBtnPressed] = useState(false);
 
   /* const isVisible = useIntersect(thingToWatch);
   const isNextVisible = useIntersect(thingToWatchNext); */
-  const isVisible = useIntersect(thingToWatch, undefined, {
+  /* const isVisible = useIntersect(thingToWatch, undefined, {
     debug: true,
     repeats: false,
   });
@@ -63,6 +96,9 @@ function App() {
     repeats: false,
   });
   console.log(isVisible, isNextVisible);
+  */
+  const [thingToWatch, isVisible] = useIntersectRef();
+  const [thingToWatchNext, isNextVisible] = useIntersectRef();
 
   return (
     <div ref={rootRect} className="App">
