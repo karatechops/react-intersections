@@ -8,7 +8,7 @@ const Spacer = () => <div style={{ height: '100vh' }} />;
 let prevY = 0;
 let prevIntersectionRatio = 0;
 
-export const useIsEntryLeaving = entry => {
+export const useEntryPosition = entry => {
   const [isLeaving, setIsLeaving] = useState(true);
   const [direction, setDirection] = useState('up');
 
@@ -54,6 +54,27 @@ export const useIsEntryLeaving = entry => {
   prevIntersectionRatio = intersectionRatio;
 
   return { isLeaving, direction };
+};
+
+export const useParallax = (box, range = 50) => {
+  const boxPosStatus = useEntryPosition(box);
+  const { direction, isLeaving } = boxPosStatus;
+
+  if (direction === 'down') {
+    if (isLeaving) {
+      return (range - range * box.intersectionRatio) * -1;
+    }
+    return range - range * box.intersectionRatio;
+  }
+
+  if (direction === 'up') {
+    if (isLeaving) {
+      return range - range * box.intersectionRatio;
+    }
+    return (range - range * box.intersectionRatio) * -1;
+  }
+
+  return (range - range * box.intersectionRatio) * -1;
 };
 
 export const useIntersect = ({
@@ -115,30 +136,10 @@ function App() {
     rootMargin: '-10%', // Box is 10% past viewport bottom
   });
 
-  const boxPosStatus = useIsEntryLeaving(box);
   const isVisible = entry.isIntersecting;
   const isNextVisible = entryNext.isIntersecting;
   const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
-  const getYParallax = (range = 50) => {
-    const { direction, isLeaving } = boxPosStatus;
-
-    if (direction === 'down') {
-      if (isLeaving) {
-        return (range - range * box.intersectionRatio) * -1;
-      }
-      return range - range * box.intersectionRatio;
-    }
-
-    if (direction === 'up') {
-      if (isLeaving) {
-        return range - range * box.intersectionRatio;
-      }
-      return (range - range * box.intersectionRatio) * -1;
-    }
-
-    return (range - range * box.intersectionRatio) * -1;
-  };
-  const parallaxY = getYParallax(50);
+  const parallaxY = useParallax(box, 50);
 
   return (
     <div className="App">
