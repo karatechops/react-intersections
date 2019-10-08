@@ -5,6 +5,44 @@ import './App.css';
 const buildThresholdArray = () => Array.from(Array(100).keys(), i => i / 100);
 const Spacer = () => <div style={{ height: '100vh' }} />;
 
+let prevY = 0;
+let prevIntersectionRatio = 0;
+
+export const useIsEntryLeaving = entry => {
+  const [isLeaving, setIsLeaving] = useState(false);
+  // Check for intersection observer.
+  if (!entry.intersectionRatio) {
+    return isLeaving;
+  }
+
+  const currentY = entry.boundingClientRect.y;
+  const { isIntersecting, intersectionRatio } = entry;
+
+  // Scrolling down/up
+  if (currentY < prevY) {
+    if (intersectionRatio > prevIntersectionRatio && isIntersecting) {
+      console.log(entry.target, 'Scrolling down enter');
+      setIsLeaving(false);
+    } else {
+      setIsLeaving(true);
+      console.log(entry.target, 'Scrolling down leave');
+    }
+  } else if (currentY > prevY && isIntersecting) {
+    if (intersectionRatio < prevIntersectionRatio) {
+      setIsLeaving(true);
+      console.log(entry.target, 'Scrolling up leave');
+    } else {
+      setIsLeaving(false);
+      console.log(entry.target, 'Scrolling up enter');
+    }
+  }
+
+  prevY = currentY;
+  prevIntersectionRatio = intersectionRatio;
+
+  return isLeaving;
+};
+
 export const useIntersect = ({
   root = null, // defaults to viewport when null.
   rootMargin, // expands or contracts the intersection root hit area
@@ -13,63 +51,23 @@ export const useIntersect = ({
   debug = false,
 } = {}) => {
   const [observerEntry, updateEntry] = useState({});
-  let prevIntersectionRatio = 0;
-  let prevY = 0;
   const [node, setNode] = useState(null);
 
   const observer = useRef(
     new window.IntersectionObserver(
       ([currEntry]) => {
-        const appendedEntry = {
-          isLeaving: false,
-        };
-
-        const currentY = currEntry.boundingClientRect.y;
-        const currentRatio = currEntry.intersectionRatio;
-        const { isIntersecting } = currEntry;
-
-        // Gymnastics to convert the observer type to a new object.
-        // Object.keys will not work here due to observer's inherited type.
-        /* eslint-disable */
-        for (let i in currEntry) {
-          appendedEntry[i] = currEntry[i];
-        }
-        /* eslint-enable */
-
-        // Scrolling down/up
-        if (currentY < prevY) {
-          if (currentRatio > prevIntersectionRatio && isIntersecting) {
-            console.log(currEntry.target, 'Scrolling down enter');
-            appendedEntry.isLeaving = false;
-          } else {
-            appendedEntry.isLeaving = true;
-            console.log(currEntry.target, 'Scrolling down leave');
-          }
-        } else if (currentY > prevY && isIntersecting) {
-          if (currentRatio < prevIntersectionRatio) {
-            appendedEntry.isLeaving = true;
-            console.log(currEntry.target, 'Scrolling up leave');
-          } else {
-            appendedEntry.isLeaving = false;
-            console.log(currEntry.target, 'Scrolling up enter');
-          }
-        }
-
-        prevY = currentY;
-        prevIntersectionRatio = currentRatio;
-
         if (debug) {
-          console.log(appendedEntry); // eslint-disable-line no-console
+          console.log(currEntry); // eslint-disable-line no-console
         }
 
         // Only trigger once if repeat option is false
-        if (!repeats && appendedEntry.isIntersecting) {
+        if (!repeats && currEntry.isIntersecting) {
           // Disable the observer after the event fires
           observer.current.disconnect();
-          updateEntry(appendedEntry);
+          updateEntry(currEntry);
         }
         if (repeats) {
-          updateEntry(appendedEntry);
+          updateEntry(currEntry);
         }
       },
       {
@@ -105,6 +103,8 @@ function App() {
     debug: true,
   });
 
+  const isBoxLeaving = useIsEntryLeaving(box);
+  console.log(isBoxLeaving);
   const isVisible = entry.isIntersecting;
   const isNextVisible = entryNext.isIntersecting;
   const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
