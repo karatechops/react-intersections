@@ -10,37 +10,38 @@ let prevIntersectionRatio = 0;
 
 export const useIsEntryLeaving = entry => {
   const [isLeaving, setIsLeaving] = useState(false);
+  const [direction, setDirection] = useState('down');
+
   // Check for intersection observer.
+  // TODO: Add more elegance to this check. Warn user.
   if (!entry.intersectionRatio) {
-    return isLeaving;
+    return { isLeaving, direction };
   }
 
   const currentY = entry.boundingClientRect.y;
   const { isIntersecting, intersectionRatio } = entry;
 
   // Scrolling down/up
-  if (currentY < prevY) {
+  if (currentY < prevY || prevY === 0) {
     if (intersectionRatio > prevIntersectionRatio && isIntersecting) {
-      console.log(entry.target, 'Scrolling down enter');
       setIsLeaving(false);
     } else {
       setIsLeaving(true);
-      console.log(entry.target, 'Scrolling down leave');
     }
+    setDirection('down');
   } else if (currentY > prevY && isIntersecting) {
     if (intersectionRatio < prevIntersectionRatio) {
       setIsLeaving(true);
-      console.log(entry.target, 'Scrolling up leave');
     } else {
       setIsLeaving(false);
-      console.log(entry.target, 'Scrolling up enter');
     }
+    setDirection('up');
   }
 
   prevY = currentY;
   prevIntersectionRatio = intersectionRatio;
 
-  return isLeaving;
+  return { isLeaving, direction };
 };
 
 export const useIntersect = ({
@@ -100,15 +101,35 @@ function App() {
   const [boxToWatch, box] = useIntersect({
     threshold: buildThresholdArray(),
     rootMargin: '-10%', // Box is 10% past viewport bottom
-    debug: true,
   });
 
-  const isBoxLeaving = useIsEntryLeaving(box);
-  console.log(isBoxLeaving);
+  const boxPosStatus = useIsEntryLeaving(box);
+  console.log(boxPosStatus);
   const isVisible = entry.isIntersecting;
   const isNextVisible = entryNext.isIntersecting;
   const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
+  const getYParallax = (range = 50) => {
+    console.log('range', range, box.intersectionRatio);
+    const { direction, isLeaving } = boxPosStatus;
 
+    if (direction === 'down') {
+      if (isLeaving) {
+        return (range - range * box.intersectionRatio) * -1;
+      }
+      return range - range * box.intersectionRatio;
+    }
+
+    if (direction === 'up') {
+      if (isLeaving) {
+        return range - range * box.intersectionRatio;
+      }
+      return (range - range * box.intersectionRatio) * -1;
+    }
+
+    return (range - range * box.intersectionRatio) * -1;
+  };
+  const parallaxY = getYParallax(50);
+  console.log(parallaxY);
   return (
     <div className="App">
       <header className="App-header">
@@ -158,7 +179,7 @@ function App() {
             height: '500px',
             width: '50vw',
             background: 'cyan',
-            postion: 'relative',
+            position: 'relative',
           }}
         >
           <div style={{ position: 'absolute', zIndex: 10 }}>
@@ -166,13 +187,28 @@ function App() {
           </div>
           <div
             style={{
-              height: '500px',
+              height: '100%',
               width: '50vw',
               background: 'magenta',
-              postion: 'absolute',
+              position: 'absolute',
               bottom: 0,
+              top: 0,
               opacity: '0.4',
-              transform: `translateY(${50 - 100 * box.intersectionRatio}px)`,
+              zIndex: 2,
+              transform: `translateX(25px) translateY(${parallaxY}px)`,
+            }}
+          />
+          <div
+            style={{
+              height: '100%',
+              width: '50vw',
+              background: 'blue',
+              position: 'absolute',
+              bottom: 0,
+              top: 0,
+              opacity: '0.4',
+              zIndex: 3,
+              transform: `translateX(50px) translateY(${parallaxY * 2}px)`,
             }}
           />
         </div>
