@@ -9,20 +9,21 @@ let prevY = 0;
 let prevIntersectionRatio = 0;
 
 export const useIsEntryLeaving = entry => {
-  const [isLeaving, setIsLeaving] = useState(false);
-  const [direction, setDirection] = useState('down');
+  const [isLeaving, setIsLeaving] = useState(true);
+  const [direction, setDirection] = useState('up');
 
   // Check for intersection observer.
-  // TODO: Add more elegance to this check. Warn user.
+  // TODO: Add more elegance to this check.
   if (!entry.intersectionRatio) {
     return { isLeaving, direction };
   }
 
   const currentY = entry.boundingClientRect.y;
+  const entryTop = entry.boundingClientRect.top;
   const { isIntersecting, intersectionRatio } = entry;
 
   // Scrolling down/up
-  if (currentY < prevY || prevY === 0) {
+  if (currentY < prevY && prevY !== 0) {
     if (intersectionRatio > prevIntersectionRatio && isIntersecting) {
       setIsLeaving(false);
     } else {
@@ -36,6 +37,17 @@ export const useIsEntryLeaving = entry => {
       setIsLeaving(false);
     }
     setDirection('up');
+  }
+
+  // Handle when the initial render of the page contains the node
+  // leaving or entering the screen.
+  // Example: The page renders with deep linking.
+  if (prevY === 0 && entryTop < 0) {
+    setDirection('down');
+    setIsLeaving(true);
+  } else if (prevY === 0 && entryTop > 0) {
+    setDirection('down');
+    setIsLeaving(false);
   }
 
   prevY = currentY;
@@ -104,12 +116,10 @@ function App() {
   });
 
   const boxPosStatus = useIsEntryLeaving(box);
-  console.log(boxPosStatus);
   const isVisible = entry.isIntersecting;
   const isNextVisible = entryNext.isIntersecting;
   const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
   const getYParallax = (range = 50) => {
-    console.log('range', range, box.intersectionRatio);
     const { direction, isLeaving } = boxPosStatus;
 
     if (direction === 'down') {
@@ -129,7 +139,7 @@ function App() {
     return (range - range * box.intersectionRatio) * -1;
   };
   const parallaxY = getYParallax(50);
-  console.log(parallaxY);
+
   return (
     <div className="App">
       <header className="App-header">
