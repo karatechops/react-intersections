@@ -2,6 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import logo from './logo.svg';
 import './App.css';
 
+const buildThresholdArray = () => Array.from(Array(100).keys(), i => i / 100);
+const Spacer = () => <div style={{ height: '100vh' }} />;
+
 export const useIntersect = ({
   root = null, // defaults to viewport when null.
   rootMargin, // expands or contracts the intersection root hit area
@@ -10,20 +13,63 @@ export const useIntersect = ({
   debug = false,
 } = {}) => {
   const [observerEntry, updateEntry] = useState({});
+  let prevIntersectionRatio = 0;
+  let prevY = 0;
   const [node, setNode] = useState(null);
 
   const observer = useRef(
     new window.IntersectionObserver(
       ([currEntry]) => {
-        if (debug) console.log(currEntry); // eslint-disable-line no-console
+        const appendedEntry = {
+          isLeaving: false,
+        };
+
+        const currentY = currEntry.boundingClientRect.y;
+        const currentRatio = currEntry.intersectionRatio;
+        const { isIntersecting } = currEntry;
+
+        // Gymnastics to convert the observer type to a new object.
+        // Object.keys will not work here due to observer's inherited type.
+        /* eslint-disable */
+        for (let i in currEntry) {
+          appendedEntry[i] = currEntry[i];
+        }
+        /* eslint-enable */
+
+        // Scrolling down/up
+        if (currentY < prevY) {
+          if (currentRatio > prevIntersectionRatio && isIntersecting) {
+            console.log(currEntry.target, 'Scrolling down enter');
+            appendedEntry.isLeaving = false;
+          } else {
+            appendedEntry.isLeaving = true;
+            console.log(currEntry.target, 'Scrolling down leave');
+          }
+        } else if (currentY > prevY && isIntersecting) {
+          if (currentRatio < prevIntersectionRatio) {
+            appendedEntry.isLeaving = true;
+            console.log(currEntry.target, 'Scrolling up leave');
+          } else {
+            appendedEntry.isLeaving = false;
+            console.log(currEntry.target, 'Scrolling up enter');
+          }
+        }
+
+        prevY = currentY;
+        prevIntersectionRatio = currentRatio;
+
+        if (debug) {
+          console.log(appendedEntry); // eslint-disable-line no-console
+        }
+
         // Only trigger once if repeat option is false
-        if (!repeats && currEntry.isIntersecting) {
-          // Pull the observer after the event fires
+        if (!repeats && appendedEntry.isIntersecting) {
+          // Disable the observer after the event fires
           observer.current.disconnect();
-          updateEntry(currEntry);
+          updateEntry(appendedEntry);
         }
         if (repeats) {
-          updateEntry(currEntry);
+          updateEntry(appendedEntry);
         }
       },
       {
@@ -53,9 +99,16 @@ function App() {
 
   const [thingToWatch, entry] = useIntersect({ repeats: false });
   const [thingToWatchNext, entryNext] = useIntersect();
+  const [boxToWatch, box] = useIntersect({
+    threshold: buildThresholdArray(),
+    rootMargin: '-10%', // Box is 10% past viewport bottom
+    debug: true,
+  });
+
   const isVisible = entry.isIntersecting;
   const isNextVisible = entryNext.isIntersecting;
-  console.log(isVisible, isNextVisible);
+  const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
+
   return (
     <div className="App">
       <header className="App-header">
@@ -78,8 +131,8 @@ function App() {
         >
           Learn React
         </a>
-        <div style={{ height: '100vh' }} />
-        <div style={{ height: '100vh' }} />
+        <Spacer />
+        {/* Trigger once */}
         <div
           id="myDude"
           ref={thingToWatch}
@@ -97,10 +150,42 @@ function App() {
           </span>
         </span>
         <div style={{ height: '50vh' }} />
+        {/* Intersection ratio display, parallax effect */}
+        <div
+          id="boxThing"
+          ref={boxToWatch}
+          style={{
+            height: '500px',
+            width: '50vw',
+            background: 'cyan',
+            postion: 'relative',
+          }}
+        >
+          <div style={{ position: 'absolute', zIndex: 10 }}>
+            intersection ratio: {box.intersectionRatio && boxPercentVisible}
+          </div>
+          <div
+            style={{
+              height: '500px',
+              width: '50vw',
+              background: 'magenta',
+              postion: 'absolute',
+              bottom: 0,
+              opacity: '0.4',
+              transform: `translateY(${50 - 100 * box.intersectionRatio}px)`,
+            }}
+          />
+        </div>
+        <Spacer />
+        {/* Repeating trigger */}
         <div
           id="otherThing"
           ref={thingToWatchNext}
-          style={{ height: '10px', width: '10px', background: 'green' }}
+          style={{
+            height: '10px',
+            width: '10px',
+            background: 'green',
+          }}
         />
         <span
           style={{
@@ -113,7 +198,7 @@ function App() {
             🔁
           </span>
         </span>
-        <div style={{ height: '100vh' }} />
+        <Spacer />
       </header>
     </div>
   );
