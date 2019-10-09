@@ -1,129 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import logo from './logo.svg';
 import './App.css';
+import useIntersect from './useIntersect';
+import useParallax from './useParallax';
 
 const buildThresholdArray = () => Array.from(Array(100).keys(), i => i / 100);
 const Spacer = () => <div style={{ height: '100vh' }} />;
-
-let prevY = 0;
-let prevIntersectionRatio = 0;
-
-export const useEntryPosition = entry => {
-  const [isLeaving, setIsLeaving] = useState(true);
-  const [direction, setDirection] = useState('up');
-
-  // Check for intersection observer.
-  // TODO: Add more elegance to this check.
-  if (!entry.intersectionRatio) {
-    return { isLeaving, direction };
-  }
-
-  const currentY = entry.boundingClientRect.y;
-  const entryTop = entry.boundingClientRect.top;
-  const { isIntersecting, intersectionRatio } = entry;
-
-  // Scrolling down/up
-  if (currentY < prevY && prevY !== 0) {
-    if (intersectionRatio > prevIntersectionRatio && isIntersecting) {
-      setIsLeaving(false);
-    } else {
-      setIsLeaving(true);
-    }
-    setDirection('down');
-  } else if (currentY > prevY && isIntersecting) {
-    if (intersectionRatio < prevIntersectionRatio) {
-      setIsLeaving(true);
-    } else {
-      setIsLeaving(false);
-    }
-    setDirection('up');
-  }
-
-  // Handle when the initial render of the page contains the node
-  // leaving or entering the screen.
-  // Example: The page renders with deep linking.
-  if (prevY === 0 && entryTop < 0) {
-    setDirection('down');
-    setIsLeaving(true);
-  } else if (prevY === 0 && entryTop > 0) {
-    setDirection('down');
-    setIsLeaving(false);
-  }
-
-  prevY = currentY;
-  prevIntersectionRatio = intersectionRatio;
-
-  return { isLeaving, direction };
-};
-
-export const useParallax = (box, range = 50) => {
-  const boxPosStatus = useEntryPosition(box);
-  const { direction, isLeaving } = boxPosStatus;
-
-  if (direction === 'down') {
-    if (isLeaving) {
-      return (range - range * box.intersectionRatio) * -1;
-    }
-    return range - range * box.intersectionRatio;
-  }
-
-  if (direction === 'up') {
-    if (isLeaving) {
-      return range - range * box.intersectionRatio;
-    }
-    return (range - range * box.intersectionRatio) * -1;
-  }
-
-  return (range - range * box.intersectionRatio) * -1;
-};
-
-export const useIntersect = ({
-  root = null, // defaults to viewport when null.
-  rootMargin, // expands or contracts the intersection root hit area
-  threshold = 0, // intersection ratio value, also accepts arrays
-  repeats = true,
-  debug = false,
-} = {}) => {
-  const [observerEntry, updateEntry] = useState({});
-  const [node, setNode] = useState(null);
-
-  const observer = useRef(
-    new window.IntersectionObserver(
-      ([currEntry]) => {
-        if (debug) {
-          console.log(currEntry); // eslint-disable-line no-console
-        }
-
-        // Only trigger once if repeat option is false
-        if (!repeats && currEntry.isIntersecting) {
-          // Disable the observer after the event fires
-          observer.current.disconnect();
-          updateEntry(currEntry);
-        }
-        if (repeats) {
-          updateEntry(currEntry);
-        }
-      },
-      {
-        root,
-        rootMargin,
-        threshold,
-      },
-    ),
-  );
-
-  useEffect(() => {
-    const { current: currentObserver } = observer;
-    currentObserver.disconnect();
-
-    if (node) currentObserver.observe(node);
-
-    return () => currentObserver.disconnect();
-  }, [node]);
-
-  // Pass back method to set dom node and observer output
-  return [setNode, observerEntry];
-};
 
 function App() {
   // Test if state changes overwrite observer state
@@ -133,7 +15,7 @@ function App() {
   const [thingToWatchNext, entryNext] = useIntersect();
   const [boxToWatch, box] = useIntersect({
     threshold: buildThresholdArray(),
-    rootMargin: '-10%', // Box is 10% past viewport bottom
+    rootMargin: '-15%', // Box is 15% past viewport bottom
   });
 
   const isVisible = entry.isIntersecting;
@@ -193,9 +75,6 @@ function App() {
             position: 'relative',
           }}
         >
-          <div style={{ position: 'absolute', zIndex: 10 }}>
-            intersection ratio: {box.intersectionRatio && boxPercentVisible}
-          </div>
           <div
             style={{
               height: '100%',
@@ -222,6 +101,23 @@ function App() {
               transform: `translateX(50px) translateY(${parallaxY * 2}px)`,
             }}
           />
+          <div
+            style={{
+              height: '100%',
+              width: '50vw',
+              position: 'absolute',
+              bottom: 0,
+              top: 0,
+              zIndex: 4,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: '50px',
+              transform: `translateX(50px) translateY(${parallaxY * 5}px)`,
+            }}
+          >
+            intersection ratio: {box.intersectionRatio && boxPercentVisible}
+          </div>
         </div>
         <Spacer />
         {/* Repeating trigger */}
