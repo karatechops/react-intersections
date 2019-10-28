@@ -35,8 +35,9 @@ export const useEntryPosition = entry => {
   }
 
   // Handle when the initial render of the page contains the node
-  // leaving or entering the screen.
-  // Example: The page renders with deep linking.
+  // leaving or entering the screen. We assume the user will
+  // scroll down after the page renders.
+  // Example use case: The page renders with deep linking.
   if (prevY === 0 && entryTop < 0) {
     setDirection('down');
     setIsLeaving(true);
