@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
 
 export const useIntersection = ({
   root = null, // defaults to viewport when null.
@@ -35,7 +35,7 @@ export const useIntersection = ({
       ),
   );
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (observer) {
       const { current: currentObserver } = observer;
       currentObserver.disconnect();

@@ -1,55 +1,85 @@
-import { useState } from 'react';
+import { useState, useLayoutEffect } from 'react';
+import { buildThresholdArray } from './utils';
+import useIntersect from './useIntersect';
 
-let prevY = 0;
+// TODO: A bug still exists in this component. Ocassionally, if the user
+// TODO: is scoller slowly through a given observer threshold the
+// TODO: intersectionRatio of 1 is missed.
+
+// These values respond better outside of the scope of
+// the component.
+// TODO: figure out if this is best practice.
+let prevTop = 0;
 let prevIntersectionRatio = 0;
 
-export const useEntryPosition = entry => {
-  const [isLeaving, setIsLeaving] = useState(true);
-  const [direction, setDirection] = useState('up');
+const POSITION_STATUS = {
+  LEAVING: 'leaving',
+  ENTERING: 'entering',
+  VISIBLE: 'visible',
+};
 
-  // Check for intersection observer.
-  // TODO: Add more elegance to this check.
-  if (!entry.intersectionRatio) {
-    return { isLeaving, direction };
-  }
+export const useEntryPosition = () => {
+  const [setEntry, entryObserver] = useIntersect({
+    threshold: buildThresholdArray(),
+  });
+  const [intersectionRatio, setIntersectionRatio] = useState(0);
+  const [target, setTarget] = useState();
+  const [elementIs, setElementIs] = useState(undefined);
+  const [direction, setDirection] = useState('down');
+  const [onScroll, setOnScroll] = useState();
 
-  const currentY = entry.boundingClientRect.y;
-  const entryTop = entry.boundingClientRect.top;
-  const { isIntersecting, intersectionRatio } = entry;
-
-  // Scrolling down/up
-  if (currentY < prevY && prevY !== 0) {
-    if (intersectionRatio > prevIntersectionRatio && isIntersecting) {
-      setIsLeaving(false);
-    } else {
-      setIsLeaving(true);
+  const handleScroll = () => {
+    // Setting a function to state requires an extra return.
+    const { top } = entryObserver.target.getBoundingClientRect();
+    if (top < prevTop || prevTop === 0) {
+      setDirection('down');
+    } else if (top > prevTop) {
+      setDirection('up');
     }
-    setDirection('down');
-  } else if (currentY > prevY && isIntersecting) {
-    if (intersectionRatio < prevIntersectionRatio) {
-      setIsLeaving(true);
-    } else {
-      setIsLeaving(false);
+    prevTop = top;
+  };
+
+  useLayoutEffect(() => {
+    if (!target && entryObserver.target) {
+      setTarget(entryObserver.target);
+      // Store scroll handler in state so we can keep track
+      // of it to remove later.
+      setOnScroll(() => handleScroll);
     }
-    setDirection('up');
-  }
 
-  // Handle when the initial render of the page contains the node
-  // leaving or entering the screen. We assume the user will
-  // scroll down after the page renders.
-  // Example use case: The page renders with deep linking.
-  if (prevY === 0 && entryTop < 0) {
-    setDirection('down');
-    setIsLeaving(true);
-  } else if (prevY === 0 && entryTop > 0) {
-    setDirection('down');
-    setIsLeaving(false);
-  }
+    if (entryObserver.isIntersecting && target && onScroll) {
+      document.addEventListener('scroll', onScroll);
+    }
 
-  prevY = currentY;
-  prevIntersectionRatio = intersectionRatio;
+    if (!entryObserver.isIntersecting && target) {
+      document.removeEventListener('scroll', onScroll);
+    }
 
-  return { isLeaving, direction };
+    if (entryObserver.intersectionRatio !== intersectionRatio) {
+      setIntersectionRatio(entryObserver.intersectionRatio);
+      // Re-attach scroll listener to remove stale React state data.
+      setOnScroll(() => handleScroll);
+    }
+
+    if (entryObserver.isIntersecting) {
+      if (intersectionRatio > prevIntersectionRatio) {
+        setElementIs(POSITION_STATUS.ENTERING);
+      }
+      if (intersectionRatio < prevIntersectionRatio) {
+        setElementIs(POSITION_STATUS.LEAVING);
+      }
+      if (intersectionRatio === 1 || prevIntersectionRatio === 1) {
+        setElementIs(POSITION_STATUS.VISIBLE);
+      }
+    }
+
+    prevIntersectionRatio = intersectionRatio;
+
+    // 🧹 Clean up when we're done.
+    return () => document.removeEventListener('scroll', onScroll);
+  }, [onScroll, target, entryObserver, intersectionRatio]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return [setEntry, { direction, elementIs }];
 };
 
 export default useEntryPosition;
