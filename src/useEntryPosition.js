@@ -25,7 +25,11 @@ export const useEntryPosition = () => {
   const [intersectionRatio, setIntersectionRatio] = useState(0);
   const [target, setTarget] = useState();
   const [elementIs, setElementIs] = useState(undefined);
-  const [direction, setDirection] = useState('down');
+  const [direction, setDirection] = useState(undefined);
+  const [entryPos, setEntryPos] = useState({
+    elementIs: undefined,
+    direction: undefined,
+  });
   const [onScroll, setOnScroll] = useState();
 
   const handleScroll = () => {
@@ -79,7 +83,7 @@ export const useEntryPosition = () => {
     return () => document.removeEventListener('scroll', onScroll);
   }, [onScroll, target, entryObserver, intersectionRatio]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return [setEntry, { direction, elementIs }];
+  return [setEntry, { direction, elementIs }, entryObserver];
 };
 
 export default useEntryPosition;

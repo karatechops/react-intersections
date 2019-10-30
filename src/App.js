@@ -19,12 +19,10 @@ function App() {
   const isVisible = entry.isIntersecting;
   const isNextVisible = entryNext.isIntersecting;
 
-  const [boxToWatch, box] = useIntersect({
-    threshold: buildThresholdArray(),
-    rootMargin: '-15%', // Box is 15% past viewport bottom
+  const [boxToWatch, parallaxValue] = useParallax({
+    range: 50,
   });
-  const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
-  const parallaxY = useParallax(box, 50);
+  const parallaxY = parallaxValue.range;
 
   return (
     <div className="App">
@@ -119,7 +117,7 @@ function App() {
               transform: `translateX(50px) translateY(${parallaxY * 5}px)`,
             }}
           >
-            intersection ratio: {box.intersectionRatio && boxPercentVisible}
+            Parallax rocks!
           </div>
         </div>
         <Spacer />
