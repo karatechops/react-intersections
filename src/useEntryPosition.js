@@ -60,6 +60,8 @@ export const useEntryPosition = () => {
       }
     }
 
+    // TODO: add coverage for elements thats are taller than
+    // TODO: the browser height.
     if (top > 0 && bottom < window.innerHeight) {
       elementIs = POSITION_STATUS.VISIBLE;
     }
