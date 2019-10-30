@@ -2,10 +2,6 @@ import { useState, useLayoutEffect } from 'react';
 import { buildThresholdArray } from './utils';
 import useIntersect from './useIntersect';
 
-// TODO: A bug still exists in this component. Ocassionally, if the user
-// TODO: is scoller slowly through a given observer threshold the
-// TODO: intersectionRatio of 1 is missed.
-
 // These values respond better outside of the scope of
 // the component.
 // TODO: figure out if this is best practice.
