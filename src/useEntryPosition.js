@@ -10,12 +10,16 @@ import useIntersect from './useIntersect';
 // the component.
 // TODO: figure out if this is best practice.
 let prevTop = 0;
-let prevIntersectionRatio = 0;
 
 const POSITION_STATUS = {
   LEAVING: 'leaving',
   ENTERING: 'entering',
   VISIBLE: 'visible',
+};
+
+const SCROLL_DIRECTION = {
+  UP: 'up',
+  DOWN: 'down',
 };
 
 export const useEntryPosition = () => {
@@ -24,8 +28,6 @@ export const useEntryPosition = () => {
   });
   const [intersectionRatio, setIntersectionRatio] = useState(0);
   const [target, setTarget] = useState();
-  const [elementIs, setElementIs] = useState(undefined);
-  const [direction, setDirection] = useState(undefined);
   const [entryPos, setEntryPos] = useState({
     elementIs: undefined,
     direction: undefined,
@@ -34,13 +36,40 @@ export const useEntryPosition = () => {
 
   const handleScroll = () => {
     // Setting a function to state requires an extra return.
-    const { top } = entryObserver.target.getBoundingClientRect();
+    const { top, bottom } = entryObserver.target.getBoundingClientRect();
+    let direction;
+    let elementIs;
+
     if (top < prevTop || prevTop === 0) {
-      setDirection('down');
+      direction = SCROLL_DIRECTION.DOWN;
     } else if (top > prevTop) {
-      setDirection('up');
+      direction = SCROLL_DIRECTION.UP;
     }
+
+    if (top < 0) {
+      if (direction === SCROLL_DIRECTION.DOWN) {
+        elementIs = POSITION_STATUS.LEAVING;
+      }
+      if (direction === SCROLL_DIRECTION.UP) {
+        elementIs = POSITION_STATUS.ENTERING;
+      }
+    }
+
+    if (bottom > window.innerHeight) {
+      if (direction === SCROLL_DIRECTION.DOWN) {
+        elementIs = POSITION_STATUS.ENTERING;
+      }
+      if (direction === SCROLL_DIRECTION.UP) {
+        elementIs = POSITION_STATUS.LEAVING;
+      }
+    }
+
+    if (top > 0 && bottom < window.innerHeight) {
+      elementIs = POSITION_STATUS.VISIBLE;
+    }
+
     prevTop = top;
+    setEntryPos({ direction, elementIs });
   };
 
   useLayoutEffect(() => {
@@ -65,25 +94,11 @@ export const useEntryPosition = () => {
       setOnScroll(() => handleScroll);
     }
 
-    if (entryObserver.isIntersecting) {
-      if (intersectionRatio > prevIntersectionRatio) {
-        setElementIs(POSITION_STATUS.ENTERING);
-      }
-      if (intersectionRatio < prevIntersectionRatio) {
-        setElementIs(POSITION_STATUS.LEAVING);
-      }
-      if (intersectionRatio === 1 || prevIntersectionRatio === 1) {
-        setElementIs(POSITION_STATUS.VISIBLE);
-      }
-    }
-
-    prevIntersectionRatio = intersectionRatio;
-
     // 🧹 Clean up when we're done.
     return () => document.removeEventListener('scroll', onScroll);
   }, [onScroll, target, entryObserver, intersectionRatio]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return [setEntry, { direction, elementIs }, entryObserver];
+  return [setEntry, entryPos, entryObserver];
 };
 
 export default useEntryPosition;
