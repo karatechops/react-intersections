@@ -14,20 +14,17 @@ function App() {
 
   const [thingToWatch, entry] = useIntersect({ repeats: false });
   const [thingToWatchNext, entryNext] = useIntersect();
-  /* const [boxToWatch, box] = useIntersect({
-    threshold: buildThresholdArray(),
-    rootMargin: '-15%', // Box is 15% past viewport bottom
-  }); */
 
-  // const [boxPosToWatch, boxPosEntry] = useIntersect({ debug: true });
-  // const boxPosStatus = useEntryPosition(boxPosEntry);
-  // const { direction, isLeaving } = boxPosStatus;
   const [boxPosToWatch, { direction, elementIs }] = useEntryPosition();
-
   const isVisible = entry.isIntersecting;
   const isNextVisible = entryNext.isIntersecting;
-  // const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
-  // const parallaxY = 0; //useParallax(box, 50);
+
+  const [boxToWatch, box] = useIntersect({
+    threshold: buildThresholdArray(),
+    rootMargin: '-15%', // Box is 15% past viewport bottom
+  });
+  const boxPercentVisible = Math.ceil(box.intersectionRatio * 100) / 100;
+  const parallaxY = useParallax(box, 50);
 
   return (
     <div className="App">
@@ -73,7 +70,7 @@ function App() {
         {/* Intersection ratio display, parallax effect */}
         <div
           id="boxThing"
-          // ref={boxToWatch}
+          ref={boxToWatch}
           style={{
             height: '500px',
             width: '50vw',
@@ -91,7 +88,7 @@ function App() {
               top: 0,
               opacity: '0.4',
               zIndex: 2,
-              // transform: `translateX(25px) translateY(${parallaxY}px)`,
+              transform: `translateX(25px) translateY(${parallaxY}px)`,
             }}
           />
           <div
@@ -104,7 +101,7 @@ function App() {
               top: 0,
               opacity: '0.4',
               zIndex: 3,
-              // transform: `translateX(50px) translateY(${parallaxY * 2}px)`,
+              transform: `translateX(50px) translateY(${parallaxY * 2}px)`,
             }}
           />
           <div
@@ -119,12 +116,10 @@ function App() {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: '50px',
-              // transform: `translateX(50px) translateY(${parallaxY * 5}px)`,
+              transform: `translateX(50px) translateY(${parallaxY * 5}px)`,
             }}
           >
-            {
-              // intersection ratio: {box.intersectionRatio && boxPercentVisible}
-            }
+            intersection ratio: {box.intersectionRatio && boxPercentVisible}
           </div>
         </div>
         <Spacer />
@@ -153,14 +148,16 @@ function App() {
         <div
           ref={boxPosToWatch}
           style={{
-            padding: '10px 20px',
+            padding: '20px',
             border: `${elementIs === 'visible' ? 'green' : 'red'} 3px solid`,
             transition: 'border-color 1s linear',
           }}
         >
           <h1>
-            You are scrolling {direction} while the element is {elementIs} in
-            the window.
+            You are scrolling {direction} {direction === 'up' ? '⬆️' : '⬇️️'}{' '}
+            while
+            <br />
+            element is <u>{elementIs}</u> in the window.
           </h1>
         </div>
         <Spacer />
