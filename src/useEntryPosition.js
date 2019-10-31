@@ -3,7 +3,8 @@ import { buildThresholdArray } from './utils';
 import useIntersect from './useIntersect';
 
 // These values respond better outside of the scope of
-// the component.
+// the component. Until React has a better way to
+// batch state updates this may be necessary.
 // TODO: figure out if this is best practice.
 let prevTop = 0;
 
