@@ -1,5 +1,5 @@
 import { useState, useLayoutEffect } from 'react';
-import { buildThresholdArray } from './utils';
+import { buildThresholdArray } from '../utils';
 import useIntersect from './useIntersect';
 
 // These values respond better outside of the scope of
