@@ -73,6 +73,8 @@ export const useEntryPosition = () => {
   useLayoutEffect(() => {
     if (!target && entryObserver.target) {
       setTarget(entryObserver.target);
+      // Trigger single event for initial render.
+      handleScroll();
       // Store scroll handler in state so we can keep track
       // of it to remove later.
       setOnScroll(() => handleScroll);
